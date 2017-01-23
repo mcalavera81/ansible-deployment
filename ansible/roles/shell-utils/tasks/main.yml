@@ -1,0 +1,20 @@
+
+- name: "Update /etc/hosts from inventory"
+  lineinfile:
+    dest: /etc/hosts
+    regexp: '.*{{item}}$'
+    line: "{{ hostvars[item].ansible_eth1['ipv4'].address }} {{item}}"
+    state: present
+  with_items: '{{ groups.all }}'
+
+# Set system’s hostname.
+# This module does NOT modify /etc/hosts.
+- hostname:
+    name: "{{ inventory_hostname }}"
+
+- sysctl:
+    name: vm.max_map_count 
+    value: 262144 
+    state: present
+
+- include: packages.yml

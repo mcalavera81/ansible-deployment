@@ -1,0 +1,8 @@
+---
+# tasks file for classifier
+
+- name: Download tomcat
+  get_url:
+    url: "http://archive.apache.org/dist/tomcat/tomcat-{{ tomcat.version | first }}/v{{ tomcat.version }}/bin/apache-tomcat-{{ tomcat.version }}.tar.gz"
+    dest: /tmp/apache-tomcat-{{ tomcat.version }}.tar.gz
+

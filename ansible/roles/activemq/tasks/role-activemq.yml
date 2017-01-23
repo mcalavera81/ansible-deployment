@@ -1,0 +1,14 @@
+---
+- name: Deploy ActiveMQ Service.
+  include: ../../docker-service/tasks/tasks-docker-service.yml
+  vars:
+    service_name: activemq
+    #repo: git@bitbucket.org:fonhivr/nginx-web-rproxy.git
+    path: "source"
+    version: HEAD
+    ports:
+      - "61616:61616"
+      - "61613:61613"
+      - "8161:8161"
+    networks:
+      - "{{ global_network }}"

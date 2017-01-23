@@ -1,0 +1,91 @@
+---
+# tasks file for solr
+
+- name: Install Unzip package
+  apt:
+    name: "{{ item }}"
+    state: latest
+    update_cache: yes
+  with_items:
+    - unzip
+
+- name: Download Solr
+  get_url:
+    url: "http://archive.apache.org/dist/lucene/solr/{{ solr.version }}/solr-{{ solr.version }}.tgz"
+    dest: /tmp/solr-{{ solr.version }}.tgz
+
+- name: Extract Installer
+  shell: tar xzf /tmp/solr-{{ solr.version }}.tgz solr-{{ solr.version }}/bin/install_solr_service.sh --strip-components=2
+    chdir=/tmp
+  args:
+      creates: "/tmp/install_solr_service.sh"
+
+- name: Run installer
+  shell: >
+    /tmp/install_solr_service.sh /tmp/solr-{{ solr.version }}.tgz
+    -i {{ solr.install_dir }}
+    -d {{ solr.index_dir }}
+    -u {{ solr.user }}
+    -s {{ solr.service_name }}
+    -p {{ solr.port }}
+  args:
+    creates: "/etc/init.d/{{ solr.service_name }}"
+
+- name: Remove existing SOLR_HEAP configuration.
+  lineinfile:
+    dest: "{{ solr.config_file }}"
+    regexp: "^SOLR_HEAP"
+    state: absent
+  notify: restart solr
+
+- name: Apply Solr memory configuration changes.
+  lineinfile:
+    dest: "{{ solr.config_file }}"
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+  with_items:
+      - {regexp: "^.?SOLR_JAVA_MEM=", line: 'SOLR_JAVA_MEM="-Xms{{ solr.xms }} -Xmx{{ solr.xmx }}"'}
+  notify: restart solr
+
+
+#- name: Load index schema and configuration
+#  shell: >
+#    cp -R {{ ansible_user_dir }}/{{ artifacts.backend }}-v{{ artifact.version }}/humanivr-index/.
+#    {{ solr.index_dir }}/data/
+#  tags:
+#    - debug
+
+- name: Copy index schema and configuration
+  copy:
+    src: "conversations.tar.gz"
+    dest: "{{ solr.index_dir }}/data/conversations.tar.gz"
+    force: no
+  with_items:
+    - conversations.tar.gz
+    - new-conversations_bcn_replica1.tar.gz
+  tags:
+      - debug
+
+- name: Extract index
+  shell: tar xzf {{ solr.index_dir }}/data/conversations.tar.gz
+    chdir=/{{ solr.index_dir }}/data/
+  args:
+    creates: /{{ solr.index_dir }}/data/conversations
+  tags:
+      - debug
+
+- name: Set permissions
+  file:
+    path: /{{ solr.index_dir }}/data
+    recurse: yes
+    mode: "u+rwX,g+rX,o+rX"
+    owner: "{{ solr.user }}"
+    group: "{{ solr.user }}"
+  tags:
+    - debug
+
+- name: Start solr
+  service:
+    name: "{{ solr.service_name }}"
+    state: started

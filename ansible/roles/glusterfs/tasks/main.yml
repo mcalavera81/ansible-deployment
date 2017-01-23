@@ -1,0 +1,33 @@
+---
+- name: Apt public key of gluster repo is present
+  apt_key:
+    url: http://download.gluster.org/pub/gluster/glusterfs/3.7/3.7.9/rsa.pub
+    state: present
+
+- name: Add gluster repository
+  apt_repository:
+    repo: deb http://download.gluster.org/pub/gluster/glusterfs/3.7/3.7.9/Debian/jessie/apt jessie main
+    update_cache: yes
+    state: present
+
+- name: Ensure GlusterFS is installed.
+  apt:
+    name: "{{ item }}"
+    state: installed
+    default_release: "{{ glusterfs_default_release }}"
+  with_items:
+    - glusterfs-server
+    - glusterfs-client
+
+- name: Ensure GlusterFS is started and enabled at boot.
+  service:
+    name: "{{ glusterfs_daemon }}"
+    state: restarted
+    enabled: yes
+
+- name: Wait for GlusterFS to start.
+  wait_for:
+    host: 127.0.0.1
+    port: 24007
+    timeout: 30
+

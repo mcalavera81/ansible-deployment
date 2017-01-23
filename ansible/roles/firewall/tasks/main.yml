@@ -1,0 +1,63 @@
+---
+- apt:
+    name: iptables-persistent
+    state: installed
+
+# Set default policies
+- name: Set default policies
+  iptables: chain=INPUT policy=ACCEPT
+- iptables: chain=OUTPUT policy=ACCEPT
+- iptables: chain=FORWARD policy=ACCEPT
+
+# Allow loopback
+- name: Allow loopback
+  iptables: chain=INPUT in_interface=lo source=127.0.0.0/8 destination=127.0.0.0/8 jump=ACCEPT
+
+# Allow ping
+- name: Allow ping
+  iptables: chain=INPUT protocol=icmp icmp_type=echo-request jump=ACCEPT
+- iptables: chain=OUTPUT protocol=icmp icmp_type=echo-reply jump=ACCEPT
+
+# Allow established related
+- name: Allow established related
+  iptables: chain=INPUT ctstate=ESTABLISHED,RELATED jump=ACCEPT
+
+# Allow ssh
+- name: Allow ssh
+  iptables: chain=INPUT protocol=tcp destination_port=ssh jump=ACCEPT
+
+# Allow http and https
+- name: Allow http and https
+  iptables: chain=INPUT protocol=tcp destination_port=http jump=ACCEPT
+- iptables: chain=INPUT protocol=tcp destination_port=https jump=ACCEPT
+
+- iptables_raw: >
+    name=glusterfs
+    weight=5
+    rules="-A INPUT -p tcp -m tcp --dport 24007 -j ACCEPT
+           -A INPUT -p tcp -m tcp --dport 24008 -j ACCEPT
+           -A INPUT -p tcp -m tcp --dport 111 -j ACCEPT
+           -A INPUT -p udp -m udp --dport 111 -j ACCEPT
+           -A INPUT -p tcp -m tcp --match multiport --dports 49152:49170 -j ACCEPT"
+
+- iptables_raw: >
+    name=docker_swarm
+    weight=5
+    rules="-A INPUT -p tcp -m tcp --dport 2377 -j ACCEPT
+           -A INPUT -p tcp -m tcp --dport 7946 -j ACCEPT
+           -A INPUT -p udp -m udp --dport 7946 -j ACCEPT"
+
+- iptables_raw: >
+    name=public_filter
+    weight=5
+    rules="-N PUBLIC_FILTER
+      -A PUBLIC_FILTER -m state --state RELATED,ESTABLISHED -j RETURN
+      -A PUBLIC_FILTER -p tcp -m tcp --dport 80 -j RETURN
+      -A PUBLIC_FILTER -p tcp -m tcp --dport 443 -j RETURN
+      -A PUBLIC_FILTER -i eth0 -j ACCEPT
+      -A FORWARD -j PUBLIC_FILTER"
+
+# Finally block any other input traffic
+- name: Block any other input traffic
+  iptables: chain=INPUT policy=ACCEPT
+

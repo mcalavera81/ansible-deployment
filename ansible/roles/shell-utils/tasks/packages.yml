@@ -1,0 +1,21 @@
+---
+# NTP: networking protocol for clock synchronization between computer systems .
+# Is intended to synchronize all participating computers to within
+# a few milliseconds of Coordinated Universal Time (UTC).
+
+- name: Install common packages
+  apt:
+    name: {{ item }}
+    state: present
+  with_items:
+    - vim
+    - git
+    - htop
+    - curl
+    - wget
+    - jq
+    - ntp
+
+- name: ntp is running
+  service: name=ntp state=started enabled=yes
+

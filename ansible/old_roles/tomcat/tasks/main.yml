@@ -1,0 +1,119 @@
+---
+# tasks file for tomcat
+
+- name: Download tomcat
+  get_url:
+    url: "http://archive.apache.org/dist/tomcat/tomcat-{{ tomcat.version | first }}/v{{ tomcat.version }}/bin/apache-tomcat-{{ tomcat.version }}.tar.gz"
+    dest: /tmp/apache-tomcat-{{ tomcat.version }}.tar.gz
+
+- name: Extract tomcat
+  shell: tar xzf /tmp/apache-tomcat-{{ tomcat.version }}.tar.gz
+    chdir=/opt
+  args:
+    creates: "/opt/apache-tomcat-{{ tomcat.version }}"
+
+- name: Delete temporary tomcat file
+  file:
+    path: /tmp/apache-tomcat-{{ tomcat.version }}.tar.gz
+    state: absent
+
+- name: Create tomcat symlink
+  file:
+    path: "{{ tomcat.home_dir}}"
+    state: link
+    src: /opt/apache-tomcat-{{ tomcat.version }}
+
+- name: Create tomcat group
+  group:
+    name: "{{ tomcat.group }}"
+    state: present
+
+- name: Create tomcat user
+  user:
+    name: "{{ tomcat.user }}"
+    group: "{{ tomcat.group }}"
+    home: "{{ tomcat.home_dir}}"
+    createhome: no
+    state: present
+
+- name: Set tomcat file permissions
+  file:
+    path: "/opt/apache-tomcat-{{ tomcat.version }}"
+    owner: "{{ tomcat.user }}"
+    group: "{{ tomcat.group }}"
+    recurse: yes
+
+
+- name: Create Tomcat base and bin dirs
+  file:
+    path: "{{ tomcat.base_dir }}/bin"
+    mode: 0755
+    owner: "{{ tomcat.user }}"
+    group: "{{ tomcat.group }}"
+    state: directory
+
+- name: Copy JULI jar for Tomcat
+  copy:
+    remote_src: true
+    src: "{{ tomcat.home_dir }}/bin/tomcat-juli.jar"
+    dest: "{{ tomcat.base_dir }}/bin/tomcat-juli.jar"
+    owner: "{{ tomcat.user }}"
+    group: "{{ tomcat.group }}"
+    mode: 0644
+
+- name: Copy Environment Script for Tomcat
+  template:
+    src: "setenv.sh.j2"
+    dest: "{{ tomcat.base_dir }}/bin/setenv.sh"
+    owner: "{{ tomcat.user }}"
+    group: "{{ tomcat.group }}"
+    mode: 0644
+
+- name: Copy Tomcat instance dirs
+  shell: cp -pR {{ tomcat.home_dir }}/{{ item }} {{ tomcat.base_dir }}/{{ item }}
+  with_items:
+    - "{{ tomcat.conf_dir }}"
+    - "{{ tomcat.lib_dir }}"
+    - "{{ tomcat.webapps_dir }}"
+    - "{{ tomcat.temp_dir }}"
+
+- name: Configure Tomcat server
+  template:
+    src: server.xml.j2
+    dest: "{{ tomcat.base_dir}}/conf/server.xml"
+    backup: yes
+
+- name: Configure Tomcat users
+  template:
+    src: tomcat-users.xml.j2
+    dest: "{{ tomcat.base_dir}}/{{ tomcat.conf_dir }}/tomcat-users.xml"
+    backup: true
+
+- name: Copy missing jar files
+  copy:
+    src: "{{ item }}"
+    dest: "{{ tomcat.base_dir}}/{{ tomcat.lib_dir }}/"
+  become: true
+  become_user: tomcat
+  with_fileglob:
+      - '*.jar'
+  notify:
+    - restart tomcat
+
+- name: Configure Tomcat service
+  template:
+    src: tomcat.conf.j2
+    dest: /etc/init/tomcat.conf
+    backup: true
+  notify:
+  - reload upstart
+  - restart tomcat
+
+- name: Start tomcat
+  command: initctl start tomcat
+
+- name: wait for tomcat to start
+  wait_for:
+    port: "{{ tomcat.http_port }}"
+    timeout: 60
+

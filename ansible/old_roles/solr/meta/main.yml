@@ -1,0 +1,4 @@
+---
+dependencies:
+  - oracle-java8
+  - artifacts

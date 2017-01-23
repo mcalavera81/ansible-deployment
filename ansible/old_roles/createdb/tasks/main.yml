@@ -1,0 +1,14 @@
+---
+- include: postgresql-install.yml
+  tags: ['db', 'db:install']
+
+- include: postgresql-config.yml
+  tags: ['db', 'db:config']
+
+- include: postgresql-users.yml
+  tags: ['db', 'db:users']
+
+- include: postgresql-import.yml
+  tags: ['db', 'db:import']
+
+

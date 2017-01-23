@@ -1,0 +1,6 @@
+---
+- name: Docker service is restarted
+  service:
+    name: docker
+    state: restarted
+  when: copy_result|changed or user_groups|changed

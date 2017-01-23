@@ -1,0 +1,11 @@
+---
+
+artifact_server:
+  uri: "http://hivr2.fonetic.com/artifacts"
+  user: "fonetic"
+  password: estaeslaclaveparafonetic1234
+
+artifacts:
+  loader: humanivr-loader
+  backend: humanivr-api
+  frontend: humanivr-brain

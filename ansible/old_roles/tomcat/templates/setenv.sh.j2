@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+#export JAVA_HOME="{ java_home.stdout }"
+
+export CATALINA_OPTS="$CATALINA_OPTS -Xms{{ tomcat.xms }}"
+export CATALINA_OPTS="$CATALINA_OPTS -Xmx{{ tomcat.xmx }}"
+export CATALINA_OPTS="$CATALINA_OPTS -XX:MaxPermSize=256m"
+export CATALINA_OPTS="$CATALINA_OPTS -server"
+export CATALINA_OPTS="$CATALINA_OPTS -XX:+UseParallelGC"
+
+
+

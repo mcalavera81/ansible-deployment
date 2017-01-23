@@ -1,0 +1,26 @@
+require_relative './key_authorization'
+
+Vagrant.configure('2') do |config|
+    config.vm.box = 'ubuntu/trusty64'
+    authorize_key_for_root config, '~/.ssh/id_dsa.pub', '~/.ssh/id_rsa.pub'
+    {
+        'swarm-01' => '192.168.33.10',
+        'swarm-02' => '192.168.33.11',
+        #'swarm-03' => '192.168.33.12',
+        #'demo' => '192.168.33.13'
+    }.each do |short_name, ip|
+        config.vm.define short_name do |host|
+            host.vm.network 'private_network', ip: ip
+            host.vm.hostname = "#{short_name}.hivr.dev"
+            host.vm.provider "virtualbox" do |vb|
+                vb.memory = "1024"
+            end
+            #host.vm.provision :host_shell do |host_shell|
+            #    host_shell.inline = "./docker-machine-setup.sh -k ~/.ssh/id_rsa -u root -w #{ip} #{short_name}"
+            #end
+        end
+    end
+end
+
+
+

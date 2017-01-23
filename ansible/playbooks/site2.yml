@@ -1,0 +1,16 @@
+- hosts: docker
+  become: true
+  pre_tasks:
+    - apt: name=apt-transport-https state=installed update_cache=yes
+  roles:
+    - common
+    - firewall
+    - docker
+    - docker-swarm
+
+- hosts: docker_swarm_issuer
+  become: true
+  roles:
+    - docker-registry
+   
+

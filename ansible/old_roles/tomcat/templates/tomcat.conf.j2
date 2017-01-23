@@ -1,0 +1,21 @@
+# {{ ansible_managed }}
+
+description "Tomcat Server"
+
+  start on runlevel [2345]
+  stop on runlevel [!2345]
+  respawn
+  respawn limit 10 5
+
+  setuid {{ tomcat.user }}
+  setgid {{ tomcat.group }}
+
+  env CATALINA_HOME="{{ tomcat.home_dir}}"
+  env CATALINA_BASE="{{ tomcat.base_dir}}"
+
+  exec $CATALINA_HOME/bin/catalina.sh run
+
+  # cleanup temp directory after stop
+  post-stop script
+    rm -rf $CATALINA_BASE/temp/*
+  end script

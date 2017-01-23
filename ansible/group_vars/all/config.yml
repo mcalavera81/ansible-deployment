@@ -1,0 +1,46 @@
+---
+# Global variables
+db_scripts: db_scripts
+base_path: ../inventories/development
+db_admin_user: postgres
+db_user: human-ivr
+
+db_names:
+    - human-ivr
+    - human-ivr-security
+
+db_files:
+    - human-ivr.sql
+    - human-ivr-security.sql
+
+tomcat:
+  http_port: 8090
+  https_port: 8453
+  xms: 80M
+  xmx: 80M
+  base_dir: /var/tomcat
+
+artifact:
+  version: 3.3.0
+
+
+solr:
+  install_dir: /opt/
+  index_dir: /var/solr
+  port: 8983
+  user: solr
+  service_name: solr
+  config_file: /var/solr/solr.in.sh
+  xms: 256M
+  xmx: 256M
+
+
+activemq:
+  config_file: /etc/default/activemq
+  xms: 64M
+  xmx: 64M
+  base_dir: /var/activemq
+  temp_dir: tmp
+  conf_dir: conf
+  data_dir: data
+  service_name: activemq

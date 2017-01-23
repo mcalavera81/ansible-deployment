@@ -1,0 +1,35 @@
+- name: Find Postgresql configuration file
+  find:
+    paths: "/etc"
+    patterns: "{{ postgres_conf_file }}"
+    recurse: yes
+  register: postgres_conf
+
+- name: Find Postgresql authentication file
+  find:
+    paths: "/etc"
+    patterns: "{{ postgres_auth_file }}"
+    recurse: yes
+  register: postgres_auth
+
+- name: Debug var
+  debug:
+    msg: "{{ postgres_conf.files.0.path }} {{ postgres_auth.files.0.path }}"
+
+- name: Postgresql authentication from any host
+  lineinfile:
+    dest: "{{ postgres_auth.files.0.path }}"
+    regexp: "^host\\s+all\\s+all\\s+127.0.0.1/32"
+    line: "host   all   all   0.0.0.0/0   md5"
+    backup: true
+  notify:
+      - restart postgresql
+
+- name: Postgresql listening on all interfaces
+  lineinfile:
+    dest: "{{ postgres_conf.files.0.path }}"
+    regexp: "^#?\\s*listen_addresses"
+    line: "listen_addresses = '*'"
+    backup: true
+  notify:
+      - restart postgresql

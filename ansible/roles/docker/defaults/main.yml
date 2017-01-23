@@ -1,0 +1,34 @@
+---
+
+# Docker repository branch
+#docker_repo: main
+docker_repo: testing
+# docker_repo: experimental
+
+# Extra packages that have to be installed together with Docker
+docker_dependencies: "{{ default_docker_dependencies }}"
+
+docker_pubkey_id: "58118E89F3A912897C070ADBF76221572C52609D"
+docker_pubkey_server: "hkp://ha.pool.sks-keyservers.net:80"
+
+docker_apt_repo: "deb https://apt.dockerproject.org/repo {{ ansible_distribution | lower }}-{{ ansible_distribution_release }} {{ docker_repo }}"
+
+docker_yum_repo: "https://yum.dockerproject.org/repo/{{ docker_repo }}/centos/7"
+docker_yum_gpgkey: "https://yum.dockerproject.org/gpg"
+
+
+debian_version: jessie
+
+docker_service: docker.service
+docker_service_dest: /etc/systemd/system/multi-user.target.wants/docker.service
+
+insecure_registry: 127.0.0.1:5000
+
+users:
+  - vagrant
+
+# List of the users in the Docker group
+docker_admin_users:
+  - "{{ ansible_user | default(ansible_user_id) }}" # if ansible_user is not defined, we default to the ansible ansible_user_id fact
+
+

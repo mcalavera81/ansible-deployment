@@ -1,0 +1,33 @@
+---
+
+- file:	
+    path: jenkins
+    state: directory
+    mode: 0755
+
+- synchronize:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  with_items:
+    - { src: Dockerfile, dest: jenkins/Dockerfile }
+    - { src: jobs, dest: jenkins/jobs }
+
+- name: build jenkins docker image
+  docker_image:
+    path: ./jenkins
+    name: 127.0.0.1:5000/jenkins
+    push: yes
+
+- include: ../../gluster-volume/tasks/tasks-docker-service.yml
+
+- include: ../../docker-service/tasks/tasks-docker-service.yml
+  vars:
+    name: jenkins
+    image: 127.0.0.1:5000/jenkins
+    networks:
+      - proxy
+      - ldap
+    ports: 
+      - 8080:8080
+    volumes: 
+      - type=bind,src={{ gluster_mount_dir }}/{{ volume_name }},dst=/var/jenkins_home

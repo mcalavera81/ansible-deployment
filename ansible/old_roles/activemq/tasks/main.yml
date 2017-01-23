@@ -1,0 +1,102 @@
+---
+- name: Download ActiveMQ
+  get_url:
+    url: "http://archive.apache.org/dist/activemq/{{ activemq.version }}/apache-activemq-{{ activemq.version }}-bin.tar.gz"
+    dest: /tmp/activemq-{{ activemq.version }}.tar.gz
+
+- name: Extract ActiveMQ
+  shell: tar xzf /tmp/activemq-{{ activemq.version }}.tar.gz
+    chdir=/opt
+  args:
+    creates: "/opt/apache-activemq-{{ activemq.version }}"
+
+- name: Delete temporary ActiveMQ file
+  file:
+    path: "/tmp/activemq-{{ activemq.version }}.tar.gz"
+    state: absent
+
+- name: Create ActiveMQ symlink
+  file:
+    path: "{{ activemq.home_dir }}"
+    state: link
+    src: "/opt/apache-activemq-{{ activemq.version }}"
+
+- name: Create ActiveMQ group
+  group:
+    name: "{{ activemq.group }}"
+    state: present
+
+- name: Create ActiveMQ user
+  user:
+    name: "{{ activemq.user }}"
+    group: "{{ activemq.group }}"
+    home: "{{ activemq.home_dir }}"
+    createhome: no
+    state: present
+
+- name: Set ActiveMQ file permissions
+  file:
+    path: "/opt/apache-activemq-{{ activemq.version }}"
+    owner: "{{ activemq.user }}"
+    group: "{{ activemq.group }}"
+    recurse: yes
+
+
+- name: Create ActiveMQ global default configuration
+  copy:
+    remote_src: true
+    src: "{{ activemq.home_dir }}//bin/env"
+    dest: "{{ activemq.config_file }}"
+    mode: 0644
+
+- name: Create ActiveMQ base and tmp dirs
+  file:
+    path: "{{ activemq.base_dir }}/{{ activemq.temp_dir }}"
+    mode: 0755
+    owner: "{{ activemq.user }}"
+    group: "{{ activemq.group }}"
+    state: directory
+
+
+- name: Copy ActiveMQ instance dirs
+  shell: cp -pR {{ activemq.home_dir }}/{{ item }} {{ activemq.base_dir }}/{{ item }}
+  with_items:
+    - "{{ activemq.conf_dir }}"
+    - "{{ activemq.data_dir }}"
+
+
+- name: Apply ActiveMQ memory configuration changes
+  lineinfile:
+    dest: "{{ activemq.config_file }}"
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+  with_items:
+    - {regexp: "^.?ACTIVEMQ_USER=",
+      line: 'ACTIVEMQ_USER="{{ activemq.user }}"'}
+    - {regexp: "^.?ACTIVEMQ_OPTS_MEMORY=",
+      line: 'ACTIVEMQ_OPTS_MEMORY="-Xms{{ activemq.xms }} -Xmx{{ activemq.xmx}}"'}
+    - {regexp: "^.?ACTIVEMQ_BASE=",
+      line: 'ACTIVEMQ_BASE="{{ activemq.base_dir }}"'}
+    - {regexp: "^#.?ACTIVEMQ_CONF=",
+      line: 'ACTIVEMQ_CONF="{{ activemq.base_dir }}/{{ activemq.conf_dir }}"'}
+    - {regexp: "^#.?ACTIVEMQ_DATA=",
+      line: 'ACTIVEMQ_DATA="{{ activemq.base_dir }}/{{ activemq.data_dir }}"'}
+    - {regexp: "^#.?ACTIVEMQ_TMP=",
+      line: 'ACTIVEMQ_TMP="{{ activemq.base_dir }}/{{ activemq.temp_dir }}"'}
+  notify:
+    - restart activemq
+
+
+- name: Install ActiveMQ init script
+  shell: ln -snf  {{ activemq.home_dir }}/bin/activemq /etc/init.d/activemq
+  args:
+    creates: /etc/init.d/activemq
+
+- name: Enabling system startup links for /etc/init.d/activemq
+  shell: update-rc.d activemq defaults
+
+- name: Start ActiveMQ
+  service:
+    name: "{{ activemq.service_name }}"
+    state: started

@@ -1,0 +1,4 @@
+---
+
+postgres_conf_file: postgresql.conf
+postgres_auth_file: pg_hba.conf

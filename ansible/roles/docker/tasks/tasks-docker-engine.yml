@@ -1,0 +1,74 @@
+---
+
+- name: Import Docker APT public key.
+  apt_key:
+    keyserver: "{{ docker_pubkey_server }}"
+    id: "{{ docker_pubkey_id }}"
+    state: present
+  when: ansible_os_family == 'Debian'
+
+- name: Install yum-utils if necessary.
+  yum:
+    name: yum-utils
+    state: present
+  when: ansible_os_family == 'RedHat'
+
+- name: Add the YUM Docker repository.
+  yum_repository:
+    name: docker
+    description: Docker Repository
+    baseurl: "{{ docker_yum_repo }}"
+    gpgkey: "{{ docker_yum_gpgkey }}"
+    gpgcheck: yes
+  when: ansible_os_family == 'RedHat'
+
+- name: Add the APT Docker repository.
+  apt_repository:
+    repo: "{{ docker_apt_repo }}"
+    state: present
+    #update_cache: yes
+    filename: 'docker'
+  when: ansible_os_family == 'Debian'
+
+- name: Install Docker dependencies.
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items: "{{ docker_dependencies }}"
+
+- name: Install the Docker Engine.
+  package:
+    name: docker-engine
+    state: present
+    #state: latest
+    #force: yes
+
+
+#- name: Docker service files are present
+#  template:
+#    src: "{{ docker_service }}"
+#    dest: "{{ docker_service_dest }}"
+#    force: yes
+#  register: copy_result
+#
+#- name: Daemon is reloaded
+#  command: systemctl daemon-reload
+#  when: copy_result|changed
+
+#- name: Docker service is restarted
+#  service:
+#    name: docker
+#    state: restarted
+#  when: copy_result|changed or user_groups|changed
+
+
+- name: Docker service is started.
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+
+
+
+

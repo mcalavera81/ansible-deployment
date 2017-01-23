@@ -1,0 +1,5 @@
+activemq:
+  version: '5.14.1'
+  user: activemq
+  group: activemq
+  home_dir: /opt/activemq

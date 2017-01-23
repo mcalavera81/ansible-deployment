@@ -1,0 +1,6 @@
+---
+
+- name: Include main file
+  include: ./role-activemq.yml
+  static: yes
+

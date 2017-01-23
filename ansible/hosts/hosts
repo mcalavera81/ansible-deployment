@@ -1,0 +1,25 @@
+vm01 ansible_host=192.168.0.101
+vm02 ansible_host=192.168.0.102
+vm03 ansible_host=192.168.0.103
+
+[all:vars]
+public_interface=eth1
+
+
+[docker_swarm_manager]
+vm01 docker_swarm_listen_addr=192.168.0.101 docker_swarm_advertise_addr=192.168.0.101
+vm02 docker_swarm_listen_addr=192.168.0.102 docker_swarm_advertise_addr=192.168.0.102
+
+[docker_swarm_worker]
+vm03
+
+# Issuer must be a manager
+[docker_swarm_issuer]
+vm01 
+
+[docker:children]
+docker_swarm_manager
+docker_swarm_worker
+
+[gluster:children]
+docker

@@ -1,0 +1,33 @@
+---
+
+- name: Create folder on host to be mounted into the registry container.
+  file:
+    name: /mnt/shared_volume/registry
+    mode: 644
+    state: directory
+
+- name: Deploy Docker Registry Service.
+  include: ../../docker-service/tasks/tasks-docker-service.yml
+  vars:
+    service_name: registry
+    image: registry:2
+    ports:
+      - "5000:5000"
+    networks:
+      - "{{ global_network }}"
+    volumes:
+     - type=bind,src=/mnt/shared_volume/registry,dst=/var/lib/registry
+
+- name: Wait for Docker Registry to Start.
+  wait_for:
+    host: 127.0.0.1
+    port: 5000 
+    timeout: 45 
+    state: started
+
+- name: Login to docker registry
+  docker_login:
+    registry: 127.0.0.1:5000
+    username: test
+    password: test
+    email: test@example.com

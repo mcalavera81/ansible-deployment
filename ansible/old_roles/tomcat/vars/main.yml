@@ -1,0 +1,15 @@
+---
+
+tomcat:
+  version: '8.5.6'
+  user: tomcat
+  group: tomcat
+  home_dir: /opt/tomcat
+  conf_dir: conf
+  lib_dir: lib
+  webapps_dir: webapps
+  temp_dir: temp
+  #work_dir: work
+  #logs_dir: logs
+
+

@@ -1,0 +1,29 @@
+
+- name: Make database scripts folder
+  file:
+    path: "{{ postgres_home.stdout }}/{{ db_scripts }}"
+    mode: 0755
+    owner: "{{ db_admin_user }}"
+    group: "{{ db_admin_user }}"
+    state: directory
+
+- name: Copy/push SQL dumps
+  copy:
+    src: "{{ db_scripts }}/{{ item }}"
+    dest: "{{ postgres_home.stdout }}/{{ db_scripts }}/{{ item }}"
+    mode: 0644
+    owner: "{{ db_admin_user }}"
+    group: "{{ db_admin_user }}"
+  with_items: "{{ db_files }}"
+
+- name: Importing into Postgressql the scripts
+  become: true
+  become_user: "{{ db_admin_user }}"
+  shell: psql -f "{{ postgres_home.stdout }}/{{ db_scripts }}/{{ item }}"
+  with_items: "{{ db_files }}"
+
+
+
+
+
+

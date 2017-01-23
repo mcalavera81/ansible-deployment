@@ -1,0 +1,131 @@
+---
+
+- fail:
+    msg: "Project source is ambiguous. Conflicting repo and path variables"
+  when: (repo is defined and path is defined)
+
+- name: Pull git repository for service {{ service_name }}
+  git:
+    repo: "{{ repo }}"
+    dest: "/tmp/{{ service_name }}"
+    accept_hostkey: true
+    version : "{{ version | default(HEAD) }}"
+  when: repo is defined
+
+- name: Make temporal folder to store service files
+  file:
+    path: "/tmp/{{ service_name }}/"
+    mode: 0755
+    state: directory
+  when: path is defined
+
+- name: Copy service files
+  copy:
+    src: "{{ path }}/"
+    dest: "/tmp/{{ service_name }}/"
+  when: path is defined
+
+- name: Set fact image name
+  set_fact:
+    image: "{{ registry }}/{{ service_name }}"
+  when: repo is defined or path is defined
+
+- name: Build image {{ service_name }}
+  docker_image:
+    name: "{{ image }}"
+    path: "/tmp/{{ service_name }}"
+    dockerfile: "{{ dockerfile | default('Dockerfile')}}"
+    push: yes
+    force: yes
+  when: repo is defined or path is defined
+
+# Create networks if needed
+#- name: Create networks if needed for service {{ service_name }}
+#  include: ../../docker-network/tasks/tasks-docker-service.yml
+#  vars:
+#    name: "{{ item }}"
+#    driver: overlay
+#  with_items: "{{ networks | default([]) }}"
+
+# Deploy service
+
+- name: "Service {{ service_name }} is created"
+  shell: docker service ls --filter name={{ service_name }} | grep '\s{{ service_name }}\s' | awk '{ print $1 }'
+  register: service_exists
+  changed_when: false
+
+- name: "Service {{ service_name }} is running"
+  shell: docker service ls --filter name={{ service_name }} | grep '\s{{ service_name }}\s' | awk '{ printf $3 }' | sed 's/\([0-9]\)\+.*/\1/'
+  register: running_replicas
+  when: service_exists.stdout != "" 
+  failed_when: running_replicas.stdout == "0"
+  changed_when: false
+
+- name: "Fail if service {{ service_name }} is down"
+  fail: msg="The service {{ service_name }} is down"
+  when: running_replicas is defined and running_replicas.stdout == "0"
+
+
+- name: Set common facts for service {{ service_name }}
+  set_fact:
+    networks_flags: "{{ networks|default([]) | map('regex_replace', '^(.*)$', '--network \\1') | list | join(' ') }}"
+    volumes_flags: "{{ volumes|default([]) | map('regex_replace', '^(.*)$', '--mount \\1') | list | join(' ') }}"
+    ports_flags: "{{ ports|default([]) | map('regex_replace', '^(.*)$', '-p \\1') | list | join(' ') }}" 
+    additional_flags: "{{ additional_args|default('') | replace('\n', '') }}"
+    labels_flags: "{{ labels|default([]) | map('regex_replace', '^(.*)$', '--label \\1') | list | join(' ') }}"
+    env_flags: "{{ env|default([]) | map('regex_replace', '^(.*)$', '-e \"\\1\"') | list | join(' ') }}"
+
+- name: Set fact "replicas_flags 1/2"
+  set_fact:
+    replicas_flags: "{{ replicas | regex_replace('^(.*)$', '--replicas \\1') }}"
+  when: replicas is defined
+
+- name: Set fact "replicas_flags 1/2"
+  set_fact:
+    replicas_flags: ""
+  when: replicas is not defined
+
+- name: Set fact "virtual_host_env_var"
+  set_fact:
+    virtual_host_env_var: "{{ virtual_host | regex_replace('^(.*)$', '--env VIRTUAL_HOST=\\1') }}"
+  when: virtual_host is defined
+
+- name: Set fact "virtual_host_env_var"
+  set_fact:
+    virtual_host_env_var: ""
+  when: virtual_host is not defined
+
+- name: Debug networks_flags [ service {{ service_name }}]
+  debug:
+    var: networks_flags
+
+- name: Debug volumes_flags [ service {{ service_name }} ]
+  debug:
+    var: volumes_flags
+
+- name: Debug ports_flags [ service {{ service_name }} ]
+  debug:
+    var: ports_flags
+
+- name: Debug replicas_flags [ service {{ service_name }} ]
+  debug:
+    var: replicas_flags
+
+- name: Debug additional_flags [ service {{ service_name }} ]
+  debug:
+    var: additional_flags
+
+
+- name: Create service
+  shell: "docker service create --name {{ service_name }} {{ env_flags }}
+  {{ virtual_host_env_var }} {{ replicas_flags }} {{ networks_flags }}
+  {{ ports_flags }} {{ volumes_flags }} {{ labels_flags }}
+  {{ additional_flags }} {{ image }} {{ command | default() }}"
+  when: service_exists.stdout == ""
+  register: service_run_command
+
+- name: Debug service {{ service_name }} deployment
+  debug:
+    var: service_run_command
+  when: service_exists.stdout == ""
+

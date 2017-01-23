@@ -1,0 +1,6 @@
+---
+
+- name: Include main file
+  include: ./tasks-nginx-web-rproxy.yml
+  static: yes
+

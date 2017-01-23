@@ -1,0 +1,33 @@
+- name: Install Unzip package
+  apt:
+    name: "{{ item }}"
+    state: latest
+    update_cache: yes
+  with_items:
+    - unzip
+
+- name: Download artifacts
+  get_url:
+    url: "{{ artifact_server.uri }}/v{{ artifact.version }}/{{ item.value }}-v{{ artifact.version }}.zip"
+    dest: /tmp
+    url_username: "{{ artifact_server.user }}"
+    url_password: "{{ artifact_server.password }}"
+    force_basic_auth: yes
+  with_dict: "{{ artifacts }}"
+
+- name: Unarchive artifacts
+  shell: unzip /tmp/{{ item.value }}-v{{ artifact.version }}.zip -d {{ ansible_user_dir }}/{{ item.value }}-v{{ artifact.version }}
+  with_dict: "{{ artifacts }}"
+  args:
+      creates: "{{ ansible_user_dir }}/{{ item.value }}-v{{ artifact.version }}"
+
+- name: Delete archives
+  file:
+    path: "/tmp/{{ item.value }}-v{{ artifact.version }}.zip"
+    state: absent
+  with_dict: "{{ artifacts }}"
+
+
+
+
+

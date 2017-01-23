@@ -1,0 +1,39 @@
+---
+- set_fact:
+    volume_brick_dir: "{{ gluster_brick_dir }}/{{ volume_name }}"
+    volume_mount_dir: "{{ gluster_mount_dir }}/{{ volume_name }}"
+
+- name: Brick directory {{ volume_brick_dir }} exists
+  file: path={{ volume_brick_dir }} state=directory mode=0775
+  become: true
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['docker'] }}"
+
+- name: Mountpoint {{ volume_mount_dir }} exists
+  file: path={{ gluster_mount_dir }} state=directory mode=0775
+  become: true
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['docker'] }}"
+
+- name: Configure gluster volume
+  become: true
+  gluster_volume:
+    state: present
+    name: "{{ volume_name }}"
+    brick: "{{ volume_brick_dir }}"
+    cluster: "{{ groups['docker'] | join(',') }}"
+    replicas: "{{ groups['docker']|length }}"
+    host: "{{ inventory_hostname }}"
+    force: yes
+  run_once: true
+
+- name: Shared volume is mounted
+  delegate_to: "{{ item }}"
+  become: true
+  mount:
+    name: "{{ volume_mount_dir }}"
+    src: "{{ inventory_hostname }}:/{{ volume_name }}"
+    fstype: glusterfs
+    opts: rw,defaults,_netdev
+    state: mounted
+  with_items: "{{ groups['docker'] }}"
